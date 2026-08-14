@@ -1,0 +1,117 @@
+// --- Pin Configurations ---
+
+// HC-SR04 Ultrasonic Sensor Pins
+const int TRIG_PIN = 9;
+const int ECHO_PIN = 10;
+
+// L298N Motor Driver Pins
+// Left Motor
+const int IN1 = 2;
+const int IN2 = 3;
+// Right Motor
+const int IN3 = 4;
+const int IN4 = 5;
+
+// Enable pins (Connect to PWM pins to control speed, or leave HIGH)
+const int ENA = 6; 
+const int ENB = 11;
+
+// --- Thresholds ---
+const int OBSTACLE_DISTANCE_CM = 25; // Distance to trigger turn (in cm)
+const int MOTOR_SPEED = 180;          // Motor speed range (0 - 255)
+
+void setup() {
+  // Motor pins as outputs
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+  // Ultrasonic pins
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  // Start serial monitor for debugging
+  Serial.begin(9600);
+}
+
+void loop() {
+  int distance = getDistance();
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
+
+  if (distance > 0 && distance < OBSTACLE_DISTANCE_CM) {
+    // Obstacle detected: Stop, back up briefly, and turn
+    stopMotors();
+    delay(200);
+    
+    moveBackward();
+    delay(400);
+    
+    stopMotors();
+    delay(200);
+    
+    turnRight();
+    delay(500); // Adjust duration to control turn angle
+  } else {
+    // Path is clear: Move forward
+    moveForward();
+  }
+
+  delay(50); // Short delay for measurement stability
+}
+
+// --- Helper Functions ---
+
+// Function to measure distance using HC-SR04
+int getDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000); // 30ms timeout
+  if (duration == 0) return 999; // Return large distance if timeout occurs
+
+  int distanceCm = duration * 0.034 / 2;
+  return distanceCm;
+}
+
+// Motor Movement Commands
+void moveForward() {
+  analogWrite(ENA, MOTOR_SPEED);
+  analogWrite(ENB, MOTOR_SPEED);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+}
+
+void moveBackward() {
+  analogWrite(ENA, MOTOR_SPEED);
+  analogWrite(ENB, MOTOR_SPEED);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+void turnRight() {
+  analogWrite(ENA, MOTOR_SPEED);
+  analogWrite(ENB, MOTOR_SPEED);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH); // Reverse right motor to spin in place
+}
+
+void stopMotors() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
